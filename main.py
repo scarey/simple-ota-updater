@@ -1,3 +1,5 @@
+# OTA:file:main.py
+# OTA:reboot:true
 from machine import Pin
 
 import uasyncio as asyncio
@@ -8,6 +10,7 @@ BASE_TOPIC = 'esp32/otatest'
 
 led = Pin(2, Pin.OUT)
 version = 1
+led_sleep_secs = 1
 
 mqtt = MqttHandler(BASE_TOPIC)
 
@@ -26,9 +29,9 @@ async def main():
             print("Published version...")
             while True:
                 led.on()
-                await asyncio.sleep(1)
+                await asyncio.sleep(led_sleep_secs)
                 led.off()
-                await asyncio.sleep(1)
+                await asyncio.sleep(led_sleep_secs)
         except Exception as e:
             print(f"Problem in main loop: {e}")
 

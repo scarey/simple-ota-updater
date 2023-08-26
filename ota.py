@@ -1,4 +1,5 @@
-import io
+# OTA:file:ota.py
+# OTA:reboot:true
 import machine
 
 # Look for "header" lines to indicate the filename to update and whether to reboot afterward.
@@ -14,39 +15,42 @@ import machine
 # See main.ota as an example of what would be published to the OTA topic for a simple LED blink main.py
 
 
-def process_ota_msg(msg):
-    print(f"Got OTA message: {msg}")
-    ota_buf = io.StringIO(msg)
-    headers_done = False
-    ota_fields = {}
-    current_line = None
-    while not headers_done:
-        current_line = ota_buf.readline()
-        if current_line.startswith("# OTA:"):
+def get_headers(message):
+    last_index = 0
+    index = 0
+    done = False
+    headers = {}
+    while not done:
+        current_newline = message.index('\n', index)
+        current_line = message[index: current_newline]
+        last_index = index
+        index = current_newline + 1
+        if not current_line.startswith('# OTA:'):
+            done = True
+        else:
             line_split = current_line.split(":")
             if len(line_split) == 3:
                 print(f"Found OTA header: {line_split[1]} = {line_split[2]}")
-                ota_fields[line_split[1].strip()] = line_split[2].strip()
+                headers[line_split[1].strip()] = line_split[2].strip()
             else:
                 print("Bad format for header.  Format is something like '# OTA:file:main.py'")
-        else:
-            headers_done = True
-            print(f"Found non header line")
-    print(ota_fields)
-    if 'file' in ota_fields and current_line:
-        file_done = False
+    return headers, last_index
+
+
+def process_ota_msg(msg):
+    print("Got OTA message...")
+    ota_fields, body_start = get_headers(msg)
+
+    if ota_fields:
         print(f"Found file header and data to write, writing to {ota_fields['file']}")
         with open(ota_fields['file'], 'w') as file:
-            file.write(current_line)
-            while not file_done:
-                current_line = ota_buf.readline()
-                if current_line:
-                    file.write(current_line)
-                else:
-                    file_done = True
+            if ota_fields['file'].endswith('.py'):
+                file.write(msg)
+            else:
+                file.write(msg[body_start:])
         print("Wrote new version")
         if 'reboot' in ota_fields and ota_fields['reboot'] == 'true':
             print("Rebooting...")
             machine.reset()
     else:
-        print("No file header or no data to write.")
+        print("No ota headers.")

@@ -21,9 +21,9 @@ class MqttHandler:
 
     def handle_incoming_message(self, topic, msg, retained):
         msg_string = str(msg, 'UTF-8')
-        print(f'{topic}: {msg_string}')
         if topic == self.ota_topic:
-            ota.process_ota_msg(msg)
+            print("Got OTA message...")
+            ota.process_ota_msg(msg_string)
 
     async def wifi_han(self, state):
         print('Wifi is ', 'up' if state else 'down')
